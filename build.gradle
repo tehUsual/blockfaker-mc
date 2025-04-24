@@ -84,19 +84,7 @@ tasks.register('copyReobfJar', Copy) {
     } else {
         into 'build/libs' // fallback if local.properties doesn't exist
     }
-    rename { String fileName -> 'BlockFaker.jar' }
+    rename { String fileName -> "BlockFaker-${project.version}.jar" }
 }
 
 build.dependsOn tasks.copyReobfJar
-
-/*
-// Configure the JAR task to output directly to the Minecraft server's plugins folder
-tasks.register('buildPluginJar', Jar) {
-    from sourceSets.main.output
-    archiveFileName = 'BlockFaker.jar'  // Set the output JAR name
-    destinationDirectory = file('D:/Projects/minecraft_plugins/BlockFaker_1.19.3/paper-1.19.3-fakeblock/plugins')
-    // Change this path to your server's plugin folder
-}
-
-build.dependsOn buildPluginJar  // Make sure the build task depends on the custom JAR task
-*/
