@@ -34,7 +34,7 @@ public class CreateFakeSkullFromBlockCommand extends BaseCommand implements TabC
         if (!CommandUtils.validateArgsLength(sender, command, args, 6)) return false;
         if (!CommandUtils.validateName(sender, args[0])) return false;
         if (!CommandUtils.isFakeSkullNameAvailable(sender, args[0], dataManager)) return false;
-        if (!CommandUtils.isTextureNameAvailable(sender, args[5], dataManager)) return false;
+        if (!CommandUtils.isTextureCreated(sender, args[5], dataManager)) return false;
         if (!CommandUtils.validateLocation(sender,command, args[1], args[2], args[3])) return false;
         return true;
     }
