@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -89,7 +90,7 @@ public class SkullSender {
         return new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ());
     }
 
-    private static BlockState createBlockState(FakeSkull fakeSkull) {
+    private static BlockState createBlockState(FakeSkull fakeSkull, Plugin plugin) {
         if (fakeSkull.isWallSkull()) {
             return Blocks.PLAYER_WALL_HEAD.defaultBlockState().setValue(
                     WallSkullBlock.FACING,
@@ -97,8 +98,30 @@ public class SkullSender {
             );
         } else {
             return Blocks.PLAYER_HEAD.defaultBlockState().setValue(
-                    SkullBlock.ROTATION, fakeSkull.getRotation().ordinal());
+                    SkullBlock.ROTATION, getSkullRotation(fakeSkull.getRotation()));
         }
+    }
+
+    private static int getSkullRotation(BlockFace face) {
+        return switch (face) {
+            case NORTH -> 0;
+            case NORTH_NORTH_EAST -> 1;
+            case NORTH_EAST -> 2;
+            case EAST_NORTH_EAST -> 3;
+            case EAST -> 4;
+            case EAST_SOUTH_EAST -> 5;
+            case SOUTH_EAST -> 6;
+            case SOUTH_SOUTH_EAST -> 7;
+            case SOUTH -> 8;
+            case SOUTH_SOUTH_WEST -> 9;
+            case SOUTH_WEST -> 10;
+            case WEST_SOUTH_WEST -> 11;
+            case WEST -> 12;
+            case WEST_NORTH_WEST -> 13;
+            case NORTH_WEST -> 14;
+            case NORTH_NORTH_WEST -> 15;
+            default -> 0; // Default to NORTH if invalid
+        };
     }
 
     private static boolean isPlayerNearby(Player player, Location location) {
@@ -116,7 +139,7 @@ public class SkullSender {
     private void sendSkullPacket(Player player, FakeSkull fakeSkull) {
         // Create block position and state
         BlockPos nmsBlockPos = createBlockPos(fakeSkull.getLocation());
-        BlockState nmsBlockState = createBlockState(fakeSkull);
+        BlockState nmsBlockState = createBlockState(fakeSkull, plugin);
 
         // Create skull entity
         SkullBlockEntity nmsSkullEntity = new SkullBlockEntity(nmsBlockPos, nmsBlockState);
