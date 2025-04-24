@@ -2,18 +2,14 @@ package org.smaskee.blockFaker.managers;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.*;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.plugin.Plugin;
 import org.smaskee.blockFaker.BlockFaker;
-import org.smaskee.blockFaker.commands.CommandUtils;
 import org.smaskee.blockFaker.structs.FakeBlock;
 import org.smaskee.blockFaker.structs.FakeSkull;
 
@@ -36,6 +32,17 @@ public class VisibilityManager implements Listener {
     private final Set<FakeBlock> blockUpdateBlocks;
     private final Set<FakeSkull> blockUpdateSkulls;
 
+    // New maps for tracking nearby status
+    private final Map<UUID, Map<FakeBlock, Boolean>> blockNearbyStatus;
+    private final Map<UUID, Map<FakeSkull, Boolean>> skullNearbyStatus;
+    private static final double NEARBY_MAX_TRESH = Math.min(Bukkit.getViewDistance() * 16 - 1, 80); // block threshold
+    private static final double NEARBY_MIN_TRESH = Math.max(0, NEARBY_MAX_TRESH - 17);
+
+    // Track last update time and pending updates for each player
+    private final Map<UUID, Long> lastUpdateTime = new HashMap<>();
+    private final Set<UUID> pendingUpdates = new HashSet<>();
+    private static final long UPDATE_COOLDOWN = 1000; // 1 second cooldown
+
     public VisibilityManager(BlockFaker plugin) {
         this.plugin = plugin;
 
@@ -44,6 +51,8 @@ public class VisibilityManager implements Listener {
         this.visibleSkulls = new ConcurrentHashMap<>();
         this.blockViewers = new ConcurrentHashMap<>();
         this.skullViewers = new ConcurrentHashMap<>();
+        this.blockNearbyStatus = new ConcurrentHashMap<>();
+        this.skullNearbyStatus = new ConcurrentHashMap<>();
 
         // In queue for block updates
         this.blockUpdateBlocks = new HashSet<>();
@@ -60,12 +69,138 @@ public class VisibilityManager implements Listener {
 
             // Initialize visibility for all online players
             for (Player player : plugin.getServer().getOnlinePlayers()) {
+                initializeMovementUpdater(player);
                 initializePlayerVisibility(player);
                 sendAllVisibleToPlayer(player);
             }
         }, 3L);
 
 
+    }
+
+    // -----------------------------------------------------------------------
+    // --- PLAYER MOVEMENT UPDATE --------------------------------------------
+    private boolean isNearby(Location playerLoc, Location entityLoc) {
+        if (!playerLoc.getWorld().equals(entityLoc.getWorld())) {
+            return false;
+        }
+        //double distance = playerLoc.distanceSquared(entityLoc);
+        //return distance <= NEARBY_MAX_TRESH * NEARBY_MAX_TRESH && distance >= NEARBY_MIN_TRESH * NEARBY_MIN_TRESH;
+        return playerLoc.distanceSquared(entityLoc) <= NEARBY_MAX_TRESH * NEARBY_MAX_TRESH;
+    }
+
+    private void updateNearbyStatus(Player player) {
+        updateNearbyStatus(player, true);
+    }
+
+    private void updateNearbyStatus(Player player, boolean sendUpdate) {
+        UUID playerId = player.getUniqueId();
+        Location playerLoc = player.getLocation();
+
+        // Update block nearby status
+        Map<FakeBlock, Boolean> playerBlockStatus = blockNearbyStatus.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
+        for (Map.Entry<FakeBlock, Boolean> entry : playerBlockStatus.entrySet()) {
+            FakeBlock block = entry.getKey();
+            boolean wasNearby = entry.getValue();
+            boolean isNowNearby = isNearby(playerLoc, block.getLocation());
+
+            if (wasNearby != isNowNearby) {
+                playerBlockStatus.put(block, isNowNearby);
+                if (isNowNearby && sendUpdate) {
+                    blockUpdateBlocks.add(block);
+                    blockSender.sendBlock(player, block, true);
+
+                    if (BlockFaker.debug)
+                        plugin.getLogger().info("[Move]: sending block " + block.getName() + " [" + playerBlockStatus.size() + "]");
+                }
+            }
+        }
+
+        // Update skull nearby status
+        Map<FakeSkull, Boolean> playerSkullStatus = skullNearbyStatus.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
+        for (Map.Entry<FakeSkull, Boolean> entry : playerSkullStatus.entrySet()) {
+            FakeSkull skull = entry.getKey();
+            boolean wasNearby = entry.getValue();
+            boolean isNowNearby = isNearby(playerLoc, skull.getLocation());
+
+            if (wasNearby != isNowNearby) {
+                playerSkullStatus.put(skull, isNowNearby);
+                if (isNowNearby && sendUpdate) {
+                    blockUpdateSkulls.add(skull);
+                    skullSender.sendSkull(player, skull, true);
+
+                    if (BlockFaker.debug)
+                        plugin.getLogger().info("[Move]: sending block " + skull.getName() + " [" + playerSkullStatus.size() + "]");
+                }
+            }
+        }
+    }
+
+    private void scheduleDelayedUpdate(Player player) {
+        UUID playerId = player.getUniqueId();
+
+        // If there's already a pending update, don't schedule another one
+        if (pendingUpdates.contains(playerId)) {
+            return;
+        }
+
+        pendingUpdates.add(playerId);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            updateNearbyStatus(player);
+            lastUpdateTime.put(playerId, System.currentTimeMillis());
+            pendingUpdates.remove(playerId);
+
+//            if (BlockFaker.debug)
+//                plugin.getLogger().info("[Move]: scheduled updated");
+        }, 20L);
+
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        // Only proceed if the player actually moved to a different block
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+                event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
+            return;
+        }
+
+        // Check if the player moved to a different chunk
+        boolean chunkChanged = event.getFrom().getChunk().getX() != event.getTo().getChunk().getX() ||
+                event.getFrom().getChunk().getZ() != event.getTo().getChunk().getZ();
+
+        Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
+
+        // If chunk changed
+        if (chunkChanged) {
+            long currentTime = System.currentTimeMillis();
+            if (!pendingUpdates.contains(playerId) &&
+                    (!lastUpdateTime.containsKey(playerId) || currentTime - lastUpdateTime.get(playerId) >= UPDATE_COOLDOWN))
+            {
+                // If it's been more than UPDATE_COOLDOWN, update immediately
+                updateNearbyStatus(player);
+                lastUpdateTime.put(playerId, currentTime);
+
+            // Not pending update
+            } else if (!pendingUpdates.contains(playerId)) {
+                scheduleDelayedUpdate(player);
+
+//                if (BlockFaker.debug)
+//                    plugin.getLogger().info("[Move]: scheduled");
+            }
+        }
+    }
+
+
+
+    // -----------------------------------------------------------------------
+    // --- OTHER -------------------------------------------------------------
+
+    public void initializeMovementUpdater(Player player) {
+        lastUpdateTime.put(player.getUniqueId(), System.currentTimeMillis());
+
+//        if (BlockFaker.debug)
+//            plugin.getLogger().info("[Move]: updating");
     }
 
     /**
@@ -119,14 +254,20 @@ public class VisibilityManager implements Listener {
     public void setBlockVisibility(FakeBlock block, UUID playerId, boolean visible) {
         Set<FakeBlock> playerBlocks = visibleBlocks.computeIfAbsent(playerId, k -> new HashSet<>());
         Map<UUID, FakeBlock> locationBlocks = blockViewers.computeIfAbsent(block.getLocation(), k -> new ConcurrentHashMap<>());
+        Map<FakeBlock, Boolean> playerBlockStatus = blockNearbyStatus.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
         blockUpdateBlocks.add(block);
 
         if (visible) {
             playerBlocks.add(block);
             locationBlocks.put(playerId, block);
+
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null)
+                playerBlockStatus.put(block, isNearby(player.getLocation(), block.getLocation()));
         } else {
             playerBlocks.remove(block);
             locationBlocks.remove(playerId, block);
+            playerBlockStatus.remove(block);
         }
     }
 
@@ -139,14 +280,20 @@ public class VisibilityManager implements Listener {
     public void setSkullVisibility(FakeSkull skull, UUID playerId, boolean visible) {
         Set<FakeSkull> playerSkulls = visibleSkulls.computeIfAbsent(playerId, k -> new HashSet<>());
         Map<UUID, FakeSkull> locationSkulls = skullViewers.computeIfAbsent(skull.getLocation(), k -> new ConcurrentHashMap<>());
+        Map<FakeSkull, Boolean> playerSkullStatus = skullNearbyStatus.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
         blockUpdateSkulls.add(skull);
 
         if (visible) {
             playerSkulls.add(skull);
             locationSkulls.put(playerId, skull);
+
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null)
+                playerSkullStatus.put(skull, isNearby(player.getLocation(), skull.getLocation()));
         } else {
             playerSkulls.remove(skull);
             locationSkulls.remove(playerId, skull);
+            playerSkullStatus.remove(skull);
         }
     }
 
@@ -257,6 +404,10 @@ public class VisibilityManager implements Listener {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        // Initialize movement updater
+        initializeMovementUpdater(event.getPlayer());
+        updateNearbyStatus(event.getPlayer(),false);
+
         // Initialize visibility for the player
         initializePlayerVisibility(event.getPlayer());
         // Send all visible blocks and skulls
@@ -269,6 +420,11 @@ public class VisibilityManager implements Listener {
         UUID playerId = event.getPlayer().getUniqueId();
         visibleBlocks.remove(playerId);
         visibleSkulls.remove(playerId);
+        blockNearbyStatus.remove(playerId);
+        skullNearbyStatus.remove(playerId);
+        pendingUpdates.remove(playerId);
+        lastUpdateTime.remove(playerId);
+
 
         for (Map<UUID, FakeBlock> locationBlocks : blockViewers.values()) {
             locationBlocks.remove(playerId);
@@ -286,6 +442,9 @@ public class VisibilityManager implements Listener {
 
     @EventHandler
     public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        // Update nearby list
+        updateNearbyStatus(event.getPlayer(),false);
+
         // Send all visible blocks and skulls
         sendAllVisibleToPlayer(event.getPlayer());
     }
