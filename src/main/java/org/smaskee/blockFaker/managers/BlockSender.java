@@ -85,8 +85,12 @@ public class BlockSender {
         if (!player.isOnline())
             return;
 
-        if (!isPlayerNearby(player, fakeBlock.getLocation()))
+        if (!isPlayerNearby(player, fakeBlock.getLocation())) {
+            if (BlockFaker.debug)
+                plugin.getLogger().info("[SendBlock]: player not nearby " + fakeBlock.getName());
             return;
+        }
+
 
         if (sendFake) {
             sendBlockPacket(player, fakeBlock);

@@ -90,7 +90,7 @@ public class SkullSender {
         return new BlockPos(location.getBlockX(), location.getBlockY(), location.getBlockZ());
     }
 
-    private static BlockState createBlockState(FakeSkull fakeSkull, Plugin plugin) {
+    private static BlockState createBlockState(FakeSkull fakeSkull) {
         if (fakeSkull.isWallSkull()) {
             return Blocks.PLAYER_WALL_HEAD.defaultBlockState().setValue(
                     WallSkullBlock.FACING,
@@ -139,7 +139,7 @@ public class SkullSender {
     private void sendSkullPacket(Player player, FakeSkull fakeSkull) {
         // Create block position and state
         BlockPos nmsBlockPos = createBlockPos(fakeSkull.getLocation());
-        BlockState nmsBlockState = createBlockState(fakeSkull, plugin);
+        BlockState nmsBlockState = createBlockState(fakeSkull);
 
         // Create skull entity
         SkullBlockEntity nmsSkullEntity = new SkullBlockEntity(nmsBlockPos, nmsBlockState);
@@ -184,8 +184,12 @@ public class SkullSender {
         if (dataManager.getTexture(fakeSkull.getTextureName()) == null)
             return;
 
-        if (!isPlayerNearby(player, fakeSkull.getLocation()))
+        if (!isPlayerNearby(player, fakeSkull.getLocation())) {
+            if (BlockFaker.debug)
+                plugin.getLogger().info("[SendSkull]: player not nearby " + fakeSkull.getName());
             return;
+        }
+
 
         if (sendFake) {
             sendSkullPacket(player, fakeSkull);
