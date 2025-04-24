@@ -1,0 +1,112 @@
+name: BlockFaker
+version: '1.0-SNAPSHOT'
+main: org.smaskee.blockFaker.BlockFaker
+api-version: '1.19'
+load: STARTUP
+authors: [ Smaskee ]
+depend:
+  - ProtocolLib
+
+
+commands:
+  # --- Blocks ---
+  createfakeblock:
+    description: Creates a new fake block
+    usage: /createfakeblock <name> <x> <y> <z> <world> <material>
+    permission: blockfaker.create
+  removefakeblock:
+    description: Removes an existing fake block
+    usage: /removefakeblock <name>
+    permission: blockfaker.create
+  listfakeblocks:
+    description: Lists all fake blocks
+    usage: /listfakeblocks
+    permission: blockfaker.read
+
+  togglefakeblock:
+    description: Toggles visibility of a fake block for a player
+    usage: /togglefakeblock <player> <name> <show|hide>
+    permission: blockfaker.toggle
+
+  showfakeblocks:
+    description: Shows multiple fake blocks to a player
+    usage: /showfakeblocks <player> <names...>
+    permission: blockfaker.toggle
+  hidefakeblocks:
+    description: Hides multiple fake blocks from a player
+    usage: /hidefakeblocks <player> <names...>
+    permission: blockfaker.toggle
+  hideallfakeblocks:
+    description: Hides all fake blocks from a player
+    usage: /hideallfakeblocks <player>
+    permission: blockfaker.toggle
+
+
+  # --- Textures ---
+  createtexturefromskull:
+    description: Creates a skull texture from a skull block
+    usage: /createtexturefromskull <name> <x> <y> <z> [world]
+    permission: blockfaker.create
+  removetexture:
+    description: Removes a texture
+    usage: /removetexture <name>
+    permission: blockfaker.create
+  listtextures:
+    description: Lists all textures
+    usage: /listtextures
+    permission: blockfaker.read
+
+
+  # --- Skulls ---
+  createfakeskull:
+    description: Creates a fake skull
+    usage: /createfakeskull <name> <x> <y> <z> <world> <texture_name> [ground|wall] [rotation]
+    permission: blockfaker.create
+  createfakeskullfromblock:
+    description: Creates a fake skull from a skull block
+    usage: /createfakeskullfromblock <name> <x> <y> <z> <world> <texture_name>
+    permission: blockfaker.create
+  removefakeskull:
+    description: Removes an existing fake skull
+    usage: /removefakeblock <name>
+    permission: blockfaker.create
+  listfakeskulls:
+    description: Lists all fake skulls
+    usage: /listfakeskulls
+    permission: blockfaker.read
+
+  togglefakeskull:
+    description: Toggles visibility of a fake skull for a player
+    usage: /togglefakeskull <player> <name> <show|hide>
+    permission: blockfaker.toggle
+
+  showfakeskulls:
+    description: Shows multiple fake skulls to a player
+    usage: /showfakeskulls <player> <names...>
+    permission: blockfaker.toggle
+  hidefakeskulls:
+    description: Hides multiple fake skulls from a player
+    usage: /hidefakeskulls <player> <names...>
+    permission: blockfaker.toggle
+  hideallfakeskulls:
+    description: Hides all fake skulls from a player
+    usage: /hideallfakeskulls <player>
+    permission: blockfaker.toggle
+
+
+  # --- Admin ---
+  blockfaker:
+    description: Main BlockFaker command
+    usage: /blockfaker <reload>
+    permission: blockfaker.reload
+
+permissions:
+  blockfaker.create:
+    description: Allows creating and removing fake blocks
+    default: op
+  blockfaker.read:
+    description: Allows listing fake blocks
+    default: op
+  blockfaker.toggle:
+    description: Allows showing and hiding fake blocks
+    default: op
