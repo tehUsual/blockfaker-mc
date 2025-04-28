@@ -327,7 +327,7 @@ public class VisibilityManager implements Listener {
                         }
                     }
                 }
-            }, 5L);
+            }, 20L);
         }
     }
 
