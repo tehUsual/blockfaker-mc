@@ -105,7 +105,7 @@ public class SkullBlock {
 
         // Get rotation
         if (block.getBlockData() instanceof Rotatable rotatable) {
-            rotation = rotatable.getRotation();
+            rotation = rotatable.getRotation().getOppositeFace();
         }
 
         return new SkullBlock(block.getType(), ownerName, textureValue, skullId, rotation, isWallSkull);
