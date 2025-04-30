@@ -14,32 +14,39 @@ commands:
     description: Creates a new fake block
     usage: /createfakeblock <name> <x> <y> <z> <world> <material>
     permission: blockfaker.create
+    aliases: [cfb]
   removefakeblock:
     description: Removes an existing fake block
     usage: /removefakeblock <name>
     permission: blockfaker.create
+    aliases: [rfb]
   listfakeblocks:
     description: Lists all fake blocks
     usage: /listfakeblocks
     permission: blockfaker.read
+    aliases: [lfb]
 
   togglefakeblock:
     description: Toggles visibility of a fake block for a player
     usage: /togglefakeblock <player> <name> <show|hide>
     permission: blockfaker.toggle
+    aliases: [tfb]
 
   showfakeblocks:
     description: Shows multiple fake blocks to a player
     usage: /showfakeblocks <player> <names...>
     permission: blockfaker.toggle
+    aliases: [sfb]
   hidefakeblocks:
     description: Hides multiple fake blocks from a player
     usage: /hidefakeblocks <player> <names...>
     permission: blockfaker.toggle
+    aliases: [hfb]
   hideallfakeblocks:
     description: Hides all fake blocks from a player
     usage: /hideallfakeblocks <player>
     permission: blockfaker.toggle
+    aliases: [hafb]
 
 
   # --- Textures ---
@@ -47,14 +54,17 @@ commands:
     description: Creates a skull texture from a skull block
     usage: /createtexturefromskull <name> <x> <y> <z> [world]
     permission: blockfaker.create
+    aliases: [ctfs]
   removetexture:
     description: Removes a texture
     usage: /removetexture <name>
     permission: blockfaker.create
+    aliases: [rt]
   listtextures:
     description: Lists all textures
     usage: /listtextures
     permission: blockfaker.read
+    aliases: [lt]
 
 
   # --- Skulls ---
@@ -62,36 +72,44 @@ commands:
     description: Creates a fake skull
     usage: /createfakeskull <name> <x> <y> <z> <world> <texture_name> [ground|wall] [rotation]
     permission: blockfaker.create
+    aliases: [cfs]
   createfakeskullfromblock:
     description: Creates a fake skull from a skull block
     usage: /createfakeskullfromblock <name> <x> <y> <z> <world> <texture_name>
     permission: blockfaker.create
+    aliases: [cfsfb]
   removefakeskull:
     description: Removes an existing fake skull
     usage: /removefakeblock <name>
     permission: blockfaker.create
+    aliases: [rfs]
   listfakeskulls:
     description: Lists all fake skulls
     usage: /listfakeskulls
     permission: blockfaker.read
+    aliases: [lfs]
 
   togglefakeskull:
     description: Toggles visibility of a fake skull for a player
     usage: /togglefakeskull <player> <name> <show|hide>
     permission: blockfaker.toggle
+    aliases: [tfs]
 
   showfakeskulls:
     description: Shows multiple fake skulls to a player
     usage: /showfakeskulls <player> <names...>
     permission: blockfaker.toggle
+    aliases: [sfs]
   hidefakeskulls:
     description: Hides multiple fake skulls from a player
     usage: /hidefakeskulls <player> <names...>
     permission: blockfaker.toggle
+    aliases: [hfs]
   hideallfakeskulls:
     description: Hides all fake skulls from a player
     usage: /hideallfakeskulls <player>
     permission: blockfaker.toggle
+    aliases: [hafs]
 
 
   # --- Admin ---
