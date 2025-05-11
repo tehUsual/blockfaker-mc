@@ -3,6 +3,7 @@
 *.iml
 *.iws
 .vscode/
+memory_bank/
 
 # Build
 out/
