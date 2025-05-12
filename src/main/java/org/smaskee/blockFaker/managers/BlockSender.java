@@ -58,7 +58,7 @@ public class BlockSender {
 
     private void sendBlockPacket(Player player, FakeBlock fakeBlock) {
         BlockPos nmsBlockPos = createBlockPos(fakeBlock.getLocation());
-        BlockState nmsBlockState = createBlockState(fakeBlock.getMaterial().name());
+        BlockState nmsBlockState = createBlockState(fakeBlock.getMaterial(player.getUniqueId()).name());
         if (nmsBlockState == null)
             return;
 

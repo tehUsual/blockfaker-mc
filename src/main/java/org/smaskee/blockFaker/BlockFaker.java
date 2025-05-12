@@ -8,10 +8,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.smaskee.blockFaker.commands.CommandRegistry;
 import org.smaskee.blockFaker.helpers.ANSI;
 import org.smaskee.blockFaker.listeners.BlockInteractionPacketListener;
+import org.smaskee.blockFaker.managers.BlockPacketHandler;
 import org.smaskee.blockFaker.managers.BlockSender;
 import org.smaskee.blockFaker.managers.DataManager;
+import org.smaskee.blockFaker.managers.LocationManager;
 import org.smaskee.blockFaker.managers.SkullSender;
+import org.smaskee.blockFaker.managers.TextureManager;
 import org.smaskee.blockFaker.managers.VisibilityManager;
+import org.smaskee.blockFaker.managers.PacketHandler;
 
 import java.util.logging.Level;
 
@@ -20,9 +24,12 @@ public final class BlockFaker extends JavaPlugin {
     private DataManager dataManager;
     private BlockSender blockSender;
     private SkullSender skullSender;
+    private LocationManager locationManager;
+    private BlockPacketHandler blockPacketHandler;
     private VisibilityManager visibilityManager;
     private CommandRegistry commandRegistry;
     private BlockInteractionPacketListener packetListener;
+    private TextureManager textureManager;
 
     public static final boolean debug = false;
 
@@ -39,15 +46,17 @@ public final class BlockFaker extends JavaPlugin {
             registries = server.registryAccess();
         }
 
-
         // Load plugin
         instance = this;
         dataManager = new DataManager(this, getDataFolder());
         blockSender = new BlockSender(this);
         skullSender = new SkullSender(this);
-        visibilityManager = new VisibilityManager(this);
+        locationManager = new LocationManager(this);
+        blockPacketHandler = new BlockPacketHandler(this);
+        visibilityManager = new VisibilityManager(this, locationManager, blockPacketHandler);
         commandRegistry = new CommandRegistry(this);
         packetListener = new BlockInteractionPacketListener(this);
+        textureManager = new TextureManager(this);
 
         // Register all commands
         commandRegistry.registerAllCommands();
@@ -90,6 +99,22 @@ public final class BlockFaker extends JavaPlugin {
 
     public VisibilityManager getVisibilityManager() {
         return visibilityManager;
+    }
+
+    public BlockPacketHandler getBlockPacketHandler() {
+        return blockPacketHandler;
+    }
+
+    public PacketHandler getPacketHandler() {
+        return blockPacketHandler;
+    }
+
+    public LocationManager getLocationManager() {
+        return locationManager;
+    }
+
+    public TextureManager getTextureManager() {
+        return textureManager;
     }
 
     public void logDebug(String msg, String ansi) {

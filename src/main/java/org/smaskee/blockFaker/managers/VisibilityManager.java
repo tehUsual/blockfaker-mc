@@ -12,6 +12,11 @@ import org.bukkit.plugin.Plugin;
 import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.structs.FakeBlock;
 import org.smaskee.blockFaker.structs.FakeSkull;
+import org.smaskee.blockFaker.structs.FakeEntity;
+import org.smaskee.blockFaker.managers.EntityType;
+import org.smaskee.blockFaker.managers.LocationManager;
+import org.smaskee.blockFaker.managers.BlockPacketHandler;
+// TODO: import SkullPacketHandler when implemented
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +26,14 @@ public class VisibilityManager implements Listener {
     private DataManager dataManager;
     private BlockSender blockSender;
     private SkullSender skullSender;
+    private final LocationManager locationManager;
+    private final BlockPacketHandler blockPacketHandler;
+    // private final SkullPacketHandler skullPacketHandler; // TODO: implement this
+
+    // Maps player UUID to set of locations where they can see entities
+    private final Map<UUID, Set<Location>> playerVisibleLocations;
+    // Maps location to set of player UUIDs who can see entities there
+    private final Map<Location, Set<UUID>> locationVisiblePlayers;
 
     // Maps player UUID to sets of blocks they can see
     private final Map<UUID, Set<FakeBlock>> visibleBlocks;
@@ -43,8 +56,14 @@ public class VisibilityManager implements Listener {
     private final Set<UUID> pendingUpdates = new HashSet<>();
     private static final long UPDATE_COOLDOWN = 1000; // 1 second cooldown
 
-    public VisibilityManager(BlockFaker plugin) {
+    public VisibilityManager(BlockFaker plugin, LocationManager locationManager,
+                           BlockPacketHandler blockPacketHandler/*, SkullPacketHandler skullPacketHandler*/) {
         this.plugin = plugin;
+        this.locationManager = locationManager;
+        this.blockPacketHandler = blockPacketHandler;
+        // this.skullPacketHandler = skullPacketHandler; // TODO: implement this
+        this.playerVisibleLocations = new ConcurrentHashMap<>();
+        this.locationVisiblePlayers = new ConcurrentHashMap<>();
 
         // Initialize maps with thread-safe implementations
         this.visibleBlocks = new ConcurrentHashMap<>();
@@ -74,8 +93,6 @@ public class VisibilityManager implements Listener {
                 sendAllVisibleToPlayer(player);
             }
         }, 3L);
-
-
     }
 
     // -----------------------------------------------------------------------
@@ -127,7 +144,7 @@ public class VisibilityManager implements Listener {
                 playerSkullStatus.put(skull, isNowNearby);
                 if (isNowNearby && sendUpdate) {
                     blockUpdateSkulls.add(skull);
-                    skullSender.sendSkull(player, skull, true);
+                    // TODO: send skull packet when SkullPacketHandler is implemented
 
                     if (BlockFaker.debug)
                         plugin.getLogger().info("[Move]: sending block " + skull.getName() + " [" + playerSkullStatus.size() + "]");
@@ -323,7 +340,7 @@ public class VisibilityManager implements Listener {
                         // Only send skulls that are in the same world as the player
                         if (skull.getLocation().getWorld().equals(player.getWorld())) {
                             blockUpdateSkulls.add(skull);
-                            skullSender.sendSkull(player, skull, true);
+                            // TODO: send skull packet when SkullPacketHandler is implemented
                         }
                     }
                 }
@@ -349,7 +366,7 @@ public class VisibilityManager implements Listener {
     public void updateFakeSkull(Player player, Location location) {
         FakeSkull fakeSkull = getSkullAtPosForPlayer(player, location);
         if (fakeSkull != null) {
-            skullSender.sendSkull(player, fakeSkull, true);
+            // TODO: send skull packet when SkullPacketHandler is implemented
 
             if (BlockFaker.debug)
                 plugin.getLogger().info("[Proto][Upd] Updating skull");
@@ -537,7 +554,7 @@ public class VisibilityManager implements Listener {
 
                 if (fakeSkull != null) {
                     blockUpdateSkulls.add(fakeSkull);
-                    skullSender.sendSkull(player, fakeSkull, true);
+                    // TODO: send skull packet when SkullPacketHandler is implemented
 
                     if (BlockFaker.debug)
                         plugin.getLogger().info("[Bukkit] sent fake skull");
@@ -548,5 +565,185 @@ public class VisibilityManager implements Listener {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Shows an entity to a specific player.
+     * If another entity type is visible at the same location, it will be hidden.
+     * @param entity The entity to show
+     * @param player The player to show the entity to
+     * @return true if the entity was shown successfully
+     */
+    public boolean showEntity(FakeEntity entity, Player player) {
+        Location loc = entity.getLocation();
+        UUID playerId = player.getUniqueId();
+        
+        // Determine which type to show
+        EntityType typeToShow = entity instanceof FakeBlock ? EntityType.BLOCK : EntityType.SKULL;
+        
+        // Check if the other type is currently visible
+        EntityType currentType = locationManager.getVisibleType(loc, playerId);
+        if (currentType != null && currentType != typeToShow) {
+            // Hide the currently visible entity
+            hideEntityAtLocation(loc, player, currentType);
+        }
+        
+        // Update visibility tracking
+        playerVisibleLocations.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet())
+                .add(loc);
+        locationVisiblePlayers.computeIfAbsent(loc, k -> ConcurrentHashMap.newKeySet())
+                .add(playerId);
+        
+        // Set the new visible type
+        locationManager.setVisibleType(loc, playerId, typeToShow);
+        
+        // Send the appropriate packet
+        if (typeToShow == EntityType.BLOCK) {
+            blockPacketHandler.sendPacket(player, entity, true);
+        } else {
+            // TODO: send skull packet when SkullPacketHandler is implemented
+        }
+        
+        return true;
+    }
+
+    /**
+     * Hides an entity from a specific player.
+     * @param entity The entity to hide
+     * @param player The player to hide the entity from
+     */
+    public void hideEntity(FakeEntity entity, Player player) {
+        Location loc = entity.getLocation();
+        UUID playerId = player.getUniqueId();
+        
+        // Determine which type to hide
+        EntityType typeToHide = entity instanceof FakeBlock ? EntityType.BLOCK : EntityType.SKULL;
+        
+        hideEntityAtLocation(loc, player, typeToHide);
+    }
+
+    /**
+     * Hides all entities of a specific type at a location from a player.
+     * @param location The location to hide entities at
+     * @param player The player to hide entities from
+     * @param type The type of entity to hide
+     */
+    private void hideEntityAtLocation(Location location, Player player, EntityType type) {
+        UUID playerId = player.getUniqueId();
+        
+        // Update visibility tracking
+        Set<Location> playerLocations = playerVisibleLocations.get(playerId);
+        if (playerLocations != null) {
+            playerLocations.remove(location);
+            if (playerLocations.isEmpty()) {
+                playerVisibleLocations.remove(playerId);
+            }
+        }
+        
+        Set<UUID> locationPlayers = locationVisiblePlayers.get(location);
+        if (locationPlayers != null) {
+            locationPlayers.remove(playerId);
+            if (locationPlayers.isEmpty()) {
+                locationVisiblePlayers.remove(location);
+            }
+        }
+        
+        // Clear the visible type
+        locationManager.clearVisibleType(location, playerId);
+        
+        // Send the appropriate hide packet
+        if (type == EntityType.BLOCK) {
+            FakeBlock block = locationManager.getBlock(location);
+            if (block != null) {
+                blockPacketHandler.sendPacket(player, block, false);
+            }
+        } else {
+            FakeSkull skull = locationManager.getSkull(location);
+            if (skull != null) {
+                // TODO: send skull packet when SkullPacketHandler is implemented
+            }
+        }
+    }
+
+    /**
+     * Shows an entity to all online players.
+     * @param entity The entity to show
+     */
+    public void showEntityToAll(FakeEntity entity) {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            showEntity(entity, player);
+        }
+    }
+
+    /**
+     * Hides an entity from all online players.
+     * @param entity The entity to hide
+     */
+    public void hideEntityFromAll(FakeEntity entity) {
+        for (Player player : plugin.getServer().getOnlinePlayers()) {
+            hideEntity(entity, player);
+        }
+    }
+
+    /**
+     * Checks if a player can see an entity.
+     * @param entity The entity to check
+     * @param player The player to check
+     * @return true if the player can see the entity
+     */
+    public boolean canSeeEntity(FakeEntity entity, Player player) {
+        Location loc = entity.getLocation();
+        UUID playerId = player.getUniqueId();
+        
+        Set<Location> playerLocations = playerVisibleLocations.get(playerId);
+        if (playerLocations == null || !playerLocations.contains(loc)) {
+            return false;
+        }
+        
+        EntityType visibleType = locationManager.getVisibleType(loc, playerId);
+        if (visibleType == null) {
+            return false;
+        }
+        
+        return (entity instanceof FakeBlock && visibleType == EntityType.BLOCK) ||
+               (entity instanceof FakeSkull && visibleType == EntityType.SKULL);
+    }
+
+    /**
+     * Gets all locations where a player can see entities.
+     * @param player The player to check
+     * @return Set of locations where the player can see entities
+     */
+    public Set<Location> getVisibleLocations(Player player) {
+        return new HashSet<>(playerVisibleLocations.getOrDefault(player.getUniqueId(), Collections.emptySet()));
+    }
+
+    /**
+     * Gets all players who can see entities at a location.
+     * @param location The location to check
+     * @return Set of player UUIDs who can see entities at the location
+     */
+    public Set<UUID> getVisiblePlayers(Location location) {
+        return new HashSet<>(locationVisiblePlayers.getOrDefault(location, Collections.emptySet()));
+    }
+
+    /**
+     * Cleans up all visibility data for a specific player.
+     * @param playerId The UUID of the player
+     */
+    public void cleanupPlayer(UUID playerId) {
+        Set<Location> locations = playerVisibleLocations.remove(playerId);
+        if (locations != null) {
+            for (Location loc : locations) {
+                Set<UUID> players = locationVisiblePlayers.get(loc);
+                if (players != null) {
+                    players.remove(playerId);
+                    if (players.isEmpty()) {
+                        locationVisiblePlayers.remove(loc);
+                    }
+                }
+            }
+        }
+        locationManager.cleanupPlayer(playerId);
     }
 }

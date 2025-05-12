@@ -7,67 +7,87 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.commands.BaseCommand;
+import org.smaskee.blockFaker.commands.CommandContext;
 import org.smaskee.blockFaker.commands.CommandUtils;
+import org.smaskee.blockFaker.managers.DataManager;
 import org.smaskee.blockFaker.structs.FakeSkull;
 import org.smaskee.blockFaker.structs.SkullBlock;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 // usage: /createfakeskullfromblock <name> <x> <y> <z> <world> <texture_name>
 public class CreateFakeSkullFromBlockCommand extends BaseCommand implements TabCompleter {
-    public CreateFakeSkullFromBlockCommand(JavaPlugin plugin) {
-        super(plugin);
+    private final DataManager dataManager;
+
+    public CreateFakeSkullFromBlockCommand(BlockFaker plugin) {
+        super(plugin, "createfakeskullfromblock", "blockfaker.createfakeskullfromblock",
+                "Creates a fake skull from an existing skull block",
+                "/createfakeskullfromblock <name> <x> <y> <z> <world> <texture_name>",
+                Arrays.asList("cfsb", "createskullfromblock"),
+                true);
+        this.dataManager = plugin.getDataManager();
     }
 
     @Override
-    protected boolean hasPermission(CommandSender sender) {
+    public boolean hasPermission(CommandSender sender) {
         return sender.hasPermission("blockfaker.create");
     }
 
     @Override
-    protected boolean validateCommand(CommandSender sender, Command command, String[] args) {
-        if (!CommandUtils.validateArgsLength(sender, command, args, 6)) return false;
-        if (!CommandUtils.validateName(sender, args[0])) return false;
-        if (!CommandUtils.isFakeSkullNameAvailable(sender, args[0], dataManager)) return false;
-        if (!CommandUtils.isTextureCreated(sender, args[5], dataManager)) return false;
-        if (!CommandUtils.validateLocation(sender,command, args[1], args[2], args[3])) return false;
-        return true;
-    }
+    public boolean execute(CommandContext context) {
+        if (!CommandUtils.validateArgsLength(context.getSender(), context.getCommand(), context.getArgs(), 6)) {
+            return false;
+        }
+        if (!CommandUtils.validateName(context.getSender(), context.getArg(0))) {
+            return false;
+        }
+        if (!CommandUtils.isFakeSkullNameAvailable(context.getSender(), context.getArg(0), dataManager)) {
+            return false;
+        }
+        if (!CommandUtils.isTextureCreated(context.getSender(), context.getArg(5), dataManager)) {
+            return false;
+        }
+        if (!CommandUtils.validateLocation(context.getSender(), context.getCommand(), 
+                context.getArg(1), context.getArg(2), context.getArg(3))) {
+            return false;
+        }
 
-    @Override
-    protected boolean execute(CommandSender sender, Command command, String[] args) {
-        String skullName = args[0];
-        Location location = CommandUtils.argToLocation(args[1], args[2], args[3], args[4]);
-        String textureName = args[5];
+        String skullName = context.getArg(0);
+        Location location = CommandUtils.argToLocation(context.getArg(1), context.getArg(2), 
+                context.getArg(3), context.getArg(4));
+        String textureName = context.getArg(5);
 
         // Verify skull block
         Block block = location.getBlock();
         if (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
-            sender.sendMessage("§cThere is no player skull at the given location.");
+            context.getSender().sendMessage("§cThere is no player skull at the given location.");
             return true;
         }
 
         // Load skull data
         SkullBlock skullBlock = SkullBlock.loadSkullFromBlock(location, plugin);
         if (skullBlock == null) {
-            sender.sendMessage("§cCould not extract texture from skull.");
+            context.getSender().sendMessage("§cCould not extract texture from skull.");
             return true;
         }
 
         // Create fake skull
-        FakeSkull skull = new FakeSkull(skullName, location, textureName, skullBlock.getRotation(), skullBlock.isWallSkull());
+        FakeSkull skull = new FakeSkull(skullName, location, textureName, skullBlock.getRotation(), 
+                skullBlock.isWallSkull(), plugin, plugin.getPacketHandler());
         dataManager.addSkull(skull);
+        plugin.getLocationManager().registerEntity(skull);
+        plugin.getVisibilityManager().showEntityToAll(skull);
 
-        sender.sendMessage("§aFake skull '" + skullName + "' created at " + CommandUtils.locToStr(location) + ".");
+        context.getSender().sendMessage("§aFake skull '" + skullName + "' created at " + 
+                CommandUtils.locToStr(location) + ".");
         return true;
     }
 
-    // usage: /createfakeskullfromblock <name> <x> <y> <z> <world> <texture_name>
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!(sender instanceof Player player)) {

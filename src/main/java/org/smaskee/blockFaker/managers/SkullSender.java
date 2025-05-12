@@ -2,12 +2,10 @@ package org.smaskee.blockFaker.managers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -19,7 +17,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
@@ -84,9 +81,9 @@ public class SkullSender {
         properties.add(textureProperty);
         profile.put("properties", properties);
         profile.putString("name", "BlockFaker");
-        // Set UUID
-        int[] uuidArray = uuidToIntArray(skullTexture.getUuid());
-        profile.putIntArray("id", uuidArray);
+        // Generate a random UUID for the profile
+        UUID randomUuid = UUID.randomUUID();
+        profile.putIntArray("id", uuidToIntArray(randomUuid));
 
         nbt.put("profile", profile);
         nbt.putString("id", "minecraft:skull");

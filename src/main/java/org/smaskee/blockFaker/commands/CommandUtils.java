@@ -108,7 +108,7 @@ public class CommandUtils {
 
     public static boolean isFakeBlockNameAvailable(CommandSender sender, String name, DataManager dataManager) {
         if (dataManager.getBlock(name) != null) {
-            sender.sendMessage("§cA fake block with the name '" + name + "' already exists!");
+            sender.sendMessage("§cA fake block with that name already exists!");
             return false;
         }
         return true;
@@ -130,15 +130,9 @@ public class CommandUtils {
         return true;
     }
 
-    public static boolean isFakePositionAvailable(CommandSender sender, Location loc, DataManager dataManager) {
-        FakeBlock block = dataManager.getBlockAtPosition(loc);
-        FakeSkull skull = dataManager.getSkullAtLocation(loc);
-        if (block != null) {
-            sender.sendMessage("§cThere is already a block '" + block.getName() + "' at this location!");
-            return false;
-        }
-        if (skull != null) {
-            sender.sendMessage("§cThere is already a skull '" + skull.getName() + "' at this location!");
+    public static boolean isFakePositionAvailable(CommandSender sender, Location location, DataManager dataManager) {
+        if (dataManager.getBlockAtPosition(location) != null) {
+            sender.sendMessage("§cThere is already a fake block at that location!");
             return false;
         }
         return true;

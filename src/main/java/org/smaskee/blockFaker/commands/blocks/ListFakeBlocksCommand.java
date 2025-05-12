@@ -2,42 +2,51 @@ package org.smaskee.blockFaker.commands.blocks;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.smaskee.blockFaker.structs.FakeBlock;
+import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.commands.BaseCommand;
-import org.smaskee.blockFaker.commands.CommandUtils;
+import org.smaskee.blockFaker.commands.CommandCategory;
+import org.smaskee.blockFaker.commands.CommandContext;
+import org.smaskee.blockFaker.structs.FakeBlock;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * Command for listing all registered fake blocks.
+ */
 public class ListFakeBlocksCommand extends BaseCommand {
-    public ListFakeBlocksCommand(JavaPlugin plugin) {
-        super(plugin);
+    public ListFakeBlocksCommand(BlockFaker plugin) {
+        super(plugin, "listfakeblocks", "blockfaker.listfakeblocks",
+                "Lists all registered fake blocks",
+                "/listfakeblocks",
+                Arrays.asList("lfb", "listblocks"),
+                false);
     }
 
     @Override
-    protected boolean hasPermission(CommandSender sender) {
-        return sender.hasPermission("blockfaker.read");
-    }
-
-    @Override
-    protected boolean validateCommand(CommandSender sender, Command command, String[] args) {
-        return true; // No arguments needed for this command
-    }
-
-    @Override
-    protected boolean execute(CommandSender sender, Command command, String[] args) {
-        int count = 0;
-        Map<String, FakeBlock> blocks = dataManager.getAllBlocks();
-        for (String name : blocks.keySet()) {
-            if (count > 30) break;
-
-            FakeBlock block = blocks.get(name);
-            sender.sendMessage("FakeBlock: §9" + CommandUtils.locToStr(block.getLocation()) + "§r, §a" + name);
-            count++;
+    public boolean execute(CommandContext context) {
+        Map<String, FakeBlock> blocks = plugin.getDataManager().getAllBlocks();
+        if (blocks.isEmpty()) {
+            context.getSender().sendMessage("§cThere are no registered fake blocks.");
+            return true;
         }
 
-        if (count < blocks.size())
-            sender.sendMessage("FakeBlock: §a .." + count + "more fake blocks");
+        context.getSender().sendMessage("§6=== Registered Fake Blocks ===");
+        for (FakeBlock block : blocks.values()) {
+            context.getSender().sendMessage(String.format("§e%s §7at §f%d, %d, %d §7in §f%s",
+                    block.getName(),
+                    block.getLocation().getBlockX(),
+                    block.getLocation().getBlockY(),
+                    block.getLocation().getBlockZ(),
+                    block.getLocation().getWorld().getName()));
+        }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        return new ArrayList<>();
     }
 } 

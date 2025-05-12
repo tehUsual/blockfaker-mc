@@ -122,7 +122,7 @@ public class DataManager {
                         );
                         String materialName = blockSection.getString("material", unknownMaterial);
                         Material material = Material.matchMaterial(materialName);
-                        FakeBlock block = new FakeBlock(name, loc, material);
+                        FakeBlock block = new FakeBlock(name, loc, material, (BlockFaker) plugin, ((BlockFaker) plugin).getBlockPacketHandler());
 
                         // load visibility data
                         for (String uuidString : blockSection.getStringList("visibleTo")) {
@@ -154,7 +154,7 @@ public class DataManager {
                         String textureName = skullSection.getString("texture", "");
                         BlockFace rotation = BlockFace.valueOf(skullSection.getString("rotation", "SOUTH"));
                         boolean isWallSkull = skullSection.getBoolean("isWallSkull", false);
-                        FakeSkull skull = new FakeSkull(name, loc, textureName, rotation, isWallSkull);
+                        FakeSkull skull = new FakeSkull(name, loc, textureName, rotation, isWallSkull, (BlockFaker) plugin, null);
 
                         // load visibility data
                         for (String uuidString : skullSection.getStringList("visibleTo")) {
@@ -175,9 +175,8 @@ public class DataManager {
                 ConfigurationSection textureSection = texturesSection.getConfigurationSection(name);
                 if (textureSection != null) {
                     String value = textureSection.getString("value");
-                    String strId = textureSection.getString("uuid");
-                    if (strId != null) {
-                        textures.put(name, new SkullTexture(name, value, UUID.fromString(strId)));
+                    if (value != null) {
+                        textures.put(name, new SkullTexture(name, value));
                     }
                 }
             }
@@ -200,7 +199,7 @@ public class DataManager {
             blockSection.set("x", loc.getX());
             blockSection.set("y", loc.getY());
             blockSection.set("z", loc.getZ());
-            blockSection.set("material", block.getMaterial().toString());
+            blockSection.set("material", block.getBaseMaterial().toString());
             blockSection.set("visibleTo", block.getVisibleTo().stream().map(UUID::toString).toList());
         }
 
@@ -240,9 +239,7 @@ public class DataManager {
         for (SkullTexture skullTexture : textures.values()) {
             ConfigurationSection textureSection = texturesSection.createSection(skullTexture.getName());
             textureSection.set("value", skullTexture.getValue());
-            textureSection.set("uuid", skullTexture.getUuid().toString());
         }
-
         try {
             texturesData.save(texturesFile);
         } catch (IOException e) {
@@ -301,12 +298,9 @@ public class DataManager {
 
     // --------------------------------------------------------------
     // --- Skull textures -------------------------------------------
-    public void addTexture(String name, String value, UUID uuid) {
-        textures.put(name, new SkullTexture(name, value, uuid));
+    public void addTexture(String name, String value) {
+        textures.put(name, new SkullTexture(name, value));
         saveTextures();
-
-        if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addTexture()\u001B[0m");
     }
 
     public void removeTexture(String name) {
