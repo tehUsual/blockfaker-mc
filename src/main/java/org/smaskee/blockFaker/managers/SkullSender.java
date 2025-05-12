@@ -6,8 +6,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.level.block.WallSkullBlock;
@@ -17,9 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.structs.FakeSkull;
 import org.smaskee.blockFaker.structs.SkullTexture;
@@ -27,7 +26,7 @@ import org.smaskee.blockFaker.structs.SkullTexture;
 import java.util.UUID;
 
 public class SkullSender {
-    private final Plugin plugin;
+    private final BlockFaker plugin;
     private final DataManager dataManager;
 
     public SkullSender(BlockFaker plugin) {
@@ -144,7 +143,8 @@ public class SkullSender {
         // Create skull entity
         SkullBlockEntity nmsSkullEntity = new SkullBlockEntity(nmsBlockPos, nmsBlockState);
         CompoundTag nbtSkull = createSkullNBT(fakeSkull);
-        nmsSkullEntity.load(nbtSkull);
+        SkullBlockEntity.loadStatic(nmsBlockPos, nmsBlockState, nbtSkull, plugin.getRegistries());
+
 
         // Get connection
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
@@ -161,7 +161,7 @@ public class SkullSender {
 
     private void sendRealBlockAt(Player player, Location location) {
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-        ServerLevel nmsLevel = nmsPlayer.getLevel();
+        Level nmsLevel = nmsPlayer.level();
         BlockPos nmsBlockPos = createBlockPos(location);
 
         // Send block state

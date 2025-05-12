@@ -102,7 +102,7 @@ public class DataManager {
 
         String msg = String.format("Loaded %d blocks, %d skulls and %d textures",
                 blocks.size(), skulls.size(), textures.size());
-        plugin.getLogger().log(Level.INFO, "\u001B[35m" + msg);
+        plugin.getLogger().log(Level.INFO, "\u001B[35m" + msg + "\u001B[0m");
     }
 
     private void loadBlocks() {
@@ -257,7 +257,7 @@ public class DataManager {
         saveSkulls();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addSkull()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addSkull()\u001B[0m");
     }
 
     public void removeSkull(String name) {
@@ -265,7 +265,7 @@ public class DataManager {
         saveSkulls();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeSkull()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeSkull()\u001B[0m");
     }
 
     public FakeSkull getSkull(String name) {
@@ -306,7 +306,7 @@ public class DataManager {
         saveTextures();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addTexture()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addTexture()\u001B[0m");
     }
 
     public void removeTexture(String name) {
@@ -314,7 +314,7 @@ public class DataManager {
         saveTextures();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeTexture()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeTexture()\u001B[0m");
     }
 
     public SkullTexture getTexture(String name) {
@@ -340,7 +340,7 @@ public class DataManager {
         saveBlocks();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addBlock()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] addBlock()\u001B[0m");
     }
 
     public void removeBlock(String name) {
@@ -348,7 +348,7 @@ public class DataManager {
         saveBlocks();
 
         if (BlockFaker.debug)
-            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeBlock()");
+            plugin.getLogger().log(Level.INFO, "\u001B[35m[Saved] removeBlock()\u001B[0m");
     }
 
     public FakeBlock getBlock(String name) {

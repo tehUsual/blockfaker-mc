@@ -1,5 +1,9 @@
 package org.smaskee.blockFaker;
 
+import net.minecraft.core.HolderLookup;
+import net.minecraft.server.MinecraftServer;
+import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.smaskee.blockFaker.commands.CommandRegistry;
 import org.smaskee.blockFaker.listeners.BlockInteractionPacketListener;
@@ -11,6 +15,7 @@ import org.smaskee.blockFaker.managers.VisibilityManager;
 import java.util.logging.Level;
 
 public final class BlockFaker extends JavaPlugin {
+    private HolderLookup.Provider registries;
     private DataManager dataManager;
     private BlockSender blockSender;
     private SkullSender skullSender;
@@ -24,6 +29,17 @@ public final class BlockFaker extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // Init nms registries
+        MinecraftServer server = ((CraftServer) Bukkit.getServer()).getServer();
+        if (server == null) {
+            getServer().getPluginManager().disablePlugin(this);
+            registries = null;
+        } else {
+            registries = server.registryAccess();
+        }
+
+
+        // Load plugin
         instance = this;
         dataManager = new DataManager(this, getDataFolder());
         blockSender = new BlockSender(this);
@@ -35,9 +51,9 @@ public final class BlockFaker extends JavaPlugin {
         // Register all commands
         commandRegistry.registerAllCommands();
 
-        getLogger().info("BlockFaker has been \u001B[32menabled!");
+        getLogger().info("BlockFaker has been \u001B[32menabled!\u001B[0m");
         if (debug)
-            getLogger().info("Debug mode \u001B[33menabled!");
+            getLogger().info("Debug mode \u001B[33menabled!\u001B[0m");
     }
 
     @Override
@@ -46,9 +62,13 @@ public final class BlockFaker extends JavaPlugin {
         instance = null;
 
         if (debug)
-            getLogger().log(Level.INFO, "\u001B[35m[Saved] onDisable()");
+            getLogger().log(Level.INFO, "\u001B[35m[Saved] onDisable()\u001B[0m");
 
-        getLogger().info("BlockFaker has been \u001B[32mdisabled!");
+        getLogger().info("BlockFaker has been \u001B[32mdisabled!\u001B[0m");
+    }
+
+    public HolderLookup.Provider getRegistries() {
+        return registries;
     }
 
     public static BlockFaker getInstance() {

@@ -7,12 +7,8 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.MovingObjectPositionBlock;
-import net.minecraft.core.BlockPos;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,12 +16,8 @@ import org.bukkit.plugin.Plugin;
 import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.managers.VisibilityManager;
 
-import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
-import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import org.smaskee.blockFaker.structs.FakeBlock;
 import org.smaskee.blockFaker.structs.FakeSkull;
-
-import java.lang.reflect.Field;
 
 public class BlockInteractionPacketListener {
     private final Plugin plugin;

@@ -1,7 +1,6 @@
 package org.smaskee.blockFaker.commands.skulls;
 
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;

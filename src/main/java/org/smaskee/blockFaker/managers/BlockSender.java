@@ -1,22 +1,24 @@
 package org.smaskee.blockFaker.managers;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_19_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.smaskee.blockFaker.BlockFaker;
 import org.smaskee.blockFaker.structs.FakeBlock;
+
 
 public class BlockSender {
     private final Plugin plugin;
@@ -32,14 +34,15 @@ public class BlockSender {
     }
 
     private static BlockState createBlockState(String materialName) {
-        String key = materialName.toLowerCase(); // e.g., "cobblestone"
-        ResourceLocation id = new ResourceLocation("minecraft", key);
+        ResourceLocation id = ResourceLocation.tryParse("minecraft:" + materialName.toLowerCase());
+        if (id == null) return null;
 
-        Block block = BuiltInRegistries.BLOCK.get(id);
-        if (block == null)
-            return null;
-        return block.defaultBlockState();
+        return BuiltInRegistries.BLOCK.get(id)
+                .map(Holder.Reference::value)
+                .map(Block::defaultBlockState)
+                .orElse(null);
     }
+
 
     private static boolean isPlayerNearby(Player player, Location location) {
         int playerChunkX = player.getLocation().getBlockX() >> 4;
@@ -65,7 +68,7 @@ public class BlockSender {
 
     private void sendRealBlockAt(Player player, Location location) {
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
-        ServerLevel nmsLevel = nmsPlayer.getLevel();
+        Level nmsLevel = nmsPlayer.level();
         BlockPos nmsBlockPos = createBlockPos(location);
 
         // Send block state

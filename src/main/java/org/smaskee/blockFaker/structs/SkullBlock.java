@@ -8,7 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Rotatable;
-import org.bukkit.craftbukkit.v1_19_R2.CraftWorld;
+import org.bukkit.craftbukkit.CraftWorld;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -43,7 +43,7 @@ public class SkullBlock {
     }
 
 
-    public static SkullBlock loadSkullFromBlock(Location location, JavaPlugin plugin) {
+    public static SkullBlock loadSkullFromBlock(Location location, BlockFaker plugin) {
         // Verify skull
         Block block = location.getBlock();
         if (block.getType() != Material.PLAYER_HEAD && block.getType() != Material.PLAYER_WALL_HEAD) {
@@ -59,7 +59,7 @@ public class SkullBlock {
             return null;
         }
 
-        CompoundTag nbt = skull.saveWithFullMetadata();
+        CompoundTag nbt = skull.saveWithFullMetadata(plugin.getRegistries());
         String ownerName = null;
         String textureValue = null;
         UUID skullId = null;
