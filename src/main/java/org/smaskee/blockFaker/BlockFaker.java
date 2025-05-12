@@ -13,7 +13,6 @@ import org.smaskee.blockFaker.managers.DataManager;
 import org.smaskee.blockFaker.managers.SkullSender;
 import org.smaskee.blockFaker.managers.VisibilityManager;
 
-import javax.annotation.Nullable;
 import java.util.logging.Level;
 
 public final class BlockFaker extends JavaPlugin {
@@ -25,7 +24,7 @@ public final class BlockFaker extends JavaPlugin {
     private CommandRegistry commandRegistry;
     private BlockInteractionPacketListener packetListener;
 
-    public static final boolean debug = true;
+    public static final boolean debug = false;
 
     private static BlockFaker instance;
 
