@@ -1,11 +1,21 @@
 plugins {
     id 'java'
-    id("xyz.jpenilla.run-paper") version "2.3.1"
-    id("io.papermc.paperweight.userdev") version "1.7.7"
+    id("io.papermc.paperweight.userdev") version "2.0.0-beta.16"
+    id("xyz.jpenilla.run-paper") version "2.3.1" // Adds runServer task for testing
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = 'org.smaskee'
 version = '1.1-SNAPSHOT'
+
+// Load local properties
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
 
 repositories {
     mavenCentral()
@@ -28,62 +38,53 @@ dependencies {
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
 }
 
-// Load local properties if they exist
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localProperties.load(new FileInputStream(localPropertiesFile))
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
 }
 
 tasks {
     runServer {
-        // Configure the Minecraft version for our task.
-        // This is the only required configuration besides applying the plugin.
-        // Your plugin's jar (or shadowJar if present) will be used automatically.
         minecraftVersion("1.21.4")
     }
-}
 
-tasks.assemble {
-    dependsOn(tasks.reobfJar)
-}
+    // Copy the built jar to the plugins directory
+    build {
+        doLast {
+            if (localProperties.containsKey('pluginsDir')) {
+                def pluginsDir = localProperties.getProperty('pluginsDir')
+                def jarFile = jar.archiveFile.get().asFile
+                def targetFile = new File(pluginsDir, jarFile.name)
 
-def targetJavaVersion = 17
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+                // Create plugins directory if it doesn't exist
+                new File(pluginsDir).mkdirs()
+
+                // Copy the jar file
+                jarFile.withInputStream { input ->
+                    targetFile.withOutputStream { output ->
+                        output << input
+                    }
+                }
+                println "Copied ${jarFile.name} to ${targetFile.absolutePath}"
+            }
+        }
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
-    }
-}
-
-"processResources" {
+processResources {
     def props = [version: version]
-    inputs.properties props
-    filteringCharset 'UTF-8'
+    inputs.properties(props)
+    filteringCharset = 'UTF-8'
     filesMatching('plugin.yml') {
-        expand props
+        expand(props)
     }
 }
 
-tasks.register('copyReobfJar', Copy) {
-    dependsOn tasks.reobfJar
-    from(tasks.reobfJar { it.outputJar })
-    if (localProperties.containsKey('pluginsDir')) {
-        into localProperties.getProperty('pluginsDir')
-    } else {
-        into 'build/libs' // fallback if local.properties doesn't exist
+// Configure for Mojang mappings
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+                'paperweight-mappings-namespace': 'mojang'
+        )
     }
-    rename { String fileName -> "BlockFaker-${project.version}.jar" }
 }
-
-build.dependsOn tasks.copyReobfJar
