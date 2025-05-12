@@ -2,10 +2,12 @@ package org.smaskee.blockFaker.managers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -17,9 +19,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.CraftServer;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.smaskee.blockFaker.BlockFaker;
+import org.smaskee.blockFaker.helpers.ANSI;
 import org.smaskee.blockFaker.structs.FakeSkull;
 import org.smaskee.blockFaker.structs.SkullTexture;
 
@@ -59,28 +64,32 @@ public class SkullSender {
         if (skullTexture == null)
             return new CompoundTag();
 
+        // Create texture
         String textureValue = skullTexture.getValue();
         if (textureValue == null)
             return new CompoundTag();
 
         CompoundTag nbt = new CompoundTag();
-        CompoundTag skullOwner = new CompoundTag();
+        CompoundTag profile = new CompoundTag();
 
-        // Create UUID array
-        int[] uuidArray = uuidToIntArray(skullTexture.getUuid());
-        skullOwner.putIntArray("Id", uuidArray);
+        // Texture property
+        CompoundTag textureProperty = new CompoundTag();
+        textureProperty.putString("name", "textures");
+        textureProperty.putString("value", textureValue);
 
         // Properties
-        CompoundTag properties = new CompoundTag();
-        ListTag textures = new ListTag();
-        CompoundTag textureData = new CompoundTag();
-        textureData.putString("Value", textureValue);
+        ListTag properties = new ListTag();
 
         // Assemble
-        textures.add(textureData);
-        properties.put("textures", textures);
-        skullOwner.put("Properties", properties);
-        nbt.put("SkullOwner", skullOwner);
+        properties.add(textureProperty);
+        profile.put("properties", properties);
+        profile.putString("name", "BlockFaker");
+        // Set UUID
+        int[] uuidArray = uuidToIntArray(skullTexture.getUuid());
+        profile.putIntArray("id", uuidArray);
+
+        nbt.put("profile", profile);
+        nbt.putString("id", "minecraft:skull");
 
         return nbt;
     }
@@ -141,10 +150,25 @@ public class SkullSender {
         BlockState nmsBlockState = createBlockState(fakeSkull);
 
         // Create skull entity
-        SkullBlockEntity nmsSkullEntity = new SkullBlockEntity(nmsBlockPos, nmsBlockState);
         CompoundTag nbtSkull = createSkullNBT(fakeSkull);
-        SkullBlockEntity.loadStatic(nmsBlockPos, nmsBlockState, nbtSkull, plugin.getRegistries());
+        SkullBlockEntity nmsSkullEntity = (SkullBlockEntity) SkullBlockEntity.loadStatic(
+                nmsBlockPos, nmsBlockState, nbtSkull, plugin.getRegistries()
+        );
 
+        if (nmsSkullEntity == null) {
+            if (BlockFaker.debug) {
+                plugin.logDebug("SkullSender", "NBT: " + nbtSkull, ANSI.MAGENTA);
+                plugin.logDebug("SkullSender", "nmsSkullEntity is NULL", ANSI.RED);
+            }
+            return;
+        }
+
+        //CompoundTag nbt = nmsSkullEntity.saveWithFullMetadata(plugin.getRegistries());
+        //plugin.logDebug("SkullSender", "NEW: " + nbt, ANSI.GREEN);
+
+        // Set skull level
+        //nmsSkullEntity.setLevel(((CraftWorld) player.getWorld()).getHandle());
+        nmsSkullEntity.setLevel(((CraftWorld) fakeSkull.getLocation().getWorld()).getHandle());
 
         // Get connection
         ServerPlayer nmsPlayer = ((CraftPlayer) player).getHandle();
@@ -154,8 +178,9 @@ public class SkullSender {
         // Send tile entity data packet
         ClientboundBlockEntityDataPacket packet = ClientboundBlockEntityDataPacket.create(
                 nmsSkullEntity,
-                BlockEntity::saveWithFullMetadata
+                (blockEntity, registries) -> blockEntity.saveWithFullMetadata(plugin.getRegistries())
         );
+
         nmsPlayer.connection.send(packet);
     }
 

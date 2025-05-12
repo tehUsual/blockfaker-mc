@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.smaskee.blockFaker.BlockFaker;
+import org.smaskee.blockFaker.helpers.ANSI;
 
 import java.util.UUID;
 
@@ -60,22 +61,24 @@ public class SkullBlock {
         }
 
         CompoundTag nbt = skull.saveWithFullMetadata(plugin.getRegistries());
+
+        if (BlockFaker.debug) {
+            plugin.logDebug("SkullBlock", nbt.toString(), ANSI.MAGENTA);
+        }
+
         String ownerName = null;
         String textureValue = null;
         UUID skullId = null;
         BlockFace rotation = BlockFace.SOUTH;
         boolean isWallSkull = block.getType() == Material.PLAYER_WALL_HEAD;
 
-        if (BlockFaker.debug)
-            plugin.getLogger().info("[SkullOrg]: NBT: " + nbt.toString());
-
-        // Get skull owner data
-        if (nbt.contains("SkullOwner")) {
-            CompoundTag skullOwner = nbt.getCompound("SkullOwner");
+        // Get profile data
+        if (nbt.contains("profile")) {
+            CompoundTag profile = nbt.getCompound("profile");
 
             // Get skull ID
-            if (skullOwner.contains("Id")) {
-                int[] intArray = skullOwner.getIntArray("Id");
+            if (profile.contains("id")) {
+                int[] intArray = profile.getIntArray("id");
                 if (intArray.length == 4) {
                     long mostSigBits = (((long) intArray[0]) << 32) | (intArray[1] & 0xFFFFFFFFL);
                     long leastSigBits = (((long) intArray[2]) << 32) | (intArray[3] & 0xFFFFFFFFL);
@@ -84,24 +87,33 @@ public class SkullBlock {
             }
 
             // Get skull name
-            if (skullOwner.contains("Name")) {
-                ownerName = skullOwner.getString("Name");
+            if (profile.contains("name")) {
+                ownerName = profile.getString("name");
             }
 
             // Get skull texture
-            if (skullOwner.contains("Properties")) {
-                CompoundTag prop = skullOwner.getCompound("Properties");
-                if (prop.contains("textures")) {
-                    ListTag textures = prop.getList("textures", Tag.TAG_COMPOUND);
-                    if (!textures.isEmpty()) {
-                        CompoundTag texture = textures.getCompound(0);
-                        if (texture.contains("Value")) {
-                            textureValue = texture.getString("Value");
+            if (profile.contains("properties")) {
+                ListTag properties = profile.getList("properties", Tag.TAG_COMPOUND);
+
+                // Get properties
+                if (!properties.isEmpty()) {
+                    for (int i = 0; i < properties.size(); i++) {
+                        CompoundTag property = properties.getCompound(i);
+
+                        if (property.contains("name")) {
+                            String propType = property.getString("name");
+                            if (propType.equals("textures")) {
+                                if (property.contains("value")) {
+                                    textureValue = property.getString("value");
+                                    break;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
 
         // Get rotation
         if (block.getBlockData() instanceof Rotatable rotatable) {

@@ -6,12 +6,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.smaskee.blockFaker.commands.CommandRegistry;
+import org.smaskee.blockFaker.helpers.ANSI;
 import org.smaskee.blockFaker.listeners.BlockInteractionPacketListener;
 import org.smaskee.blockFaker.managers.BlockSender;
 import org.smaskee.blockFaker.managers.DataManager;
 import org.smaskee.blockFaker.managers.SkullSender;
 import org.smaskee.blockFaker.managers.VisibilityManager;
 
+import javax.annotation.Nullable;
 import java.util.logging.Level;
 
 public final class BlockFaker extends JavaPlugin {
@@ -23,7 +25,7 @@ public final class BlockFaker extends JavaPlugin {
     private CommandRegistry commandRegistry;
     private BlockInteractionPacketListener packetListener;
 
-    public static final boolean debug = false;
+    public static final boolean debug = true;
 
     private static BlockFaker instance;
 
@@ -89,5 +91,15 @@ public final class BlockFaker extends JavaPlugin {
 
     public VisibilityManager getVisibilityManager() {
         return visibilityManager;
+    }
+
+    public void logDebug(String msg, String ansi) {
+        if (debug) {
+            getLogger().info(String.format("%s%s%s", ansi, msg, ANSI.RESET));
+        }
+    }
+
+    public void logDebug(String label, String msg, String ansi) {
+        logDebug(String.format("[%s]: %s", label, msg), ansi);
     }
 }
