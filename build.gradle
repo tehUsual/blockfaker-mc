@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("com.comphenix.protocol:ProtocolLib:5.4.0")
+    compileOnly("com.comphenix.protocol:ProtocolLib:5.3.0")
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
 }
 
